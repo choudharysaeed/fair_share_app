@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "417838962380",
+    "project_id": "fair-share-app-6c191",
+    "storage_bucket": "fair-share-app-6c191.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417838962380:android:1f5e415b38a5114e2e5469",
+        "android_client_info": {
+          "package_name": "com.example.fair_share_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtOO5rgXYXPbK7jn3j767H9U36U1AJGOU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
