@@ -1,0 +1,50 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fair_share_app/models/group_model.dart';
+
+class FirestoreService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> createUser({
+    required String uid,
+    required String firstName,
+    required String lastName,
+    required String email,
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'id': uid,
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': email,
+      'photoUrl': null,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> createGroup({
+    required String name,
+    required String createdBy,
+    required String currency,
+  }) async {
+    await _firestore.collection('groups').add({
+      'name': name,
+      'memberIds': [createdBy],
+      'createdBy': createdBy,
+      'currency': currency,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  Stream<List<GroupModel>> getUserGroups(String userId) {
+    return _firestore
+        .collection('groups')
+        .where('memberIds', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+
+            return GroupModel.fromMap({...data, 'id': doc.id});
+          }).toList();
+        });
+  }
+}
