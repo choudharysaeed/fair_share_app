@@ -1,4 +1,5 @@
 import 'package:fair_share_app/providers/group_provider.dart';
+import 'package:fair_share_app/screens/groups/group_details_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +32,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
       body: Consumer<GroupProvider>(
         builder: (context, groupProvider, child) {
-          if (groupProvider.groups.isEmpty){
+          if (groupProvider.groups.isEmpty) {
             return const Center(
               child: Text("No groups found", style: TextStyle(fontSize: 18)),
             );
@@ -48,6 +49,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 title: Text(group.name),
 
                 subtitle: Text(group.currency),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GroupDetailsScreen(group: group),
+                    ),
+                  );
+                },
               );
             },
           );
