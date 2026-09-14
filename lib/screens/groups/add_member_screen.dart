@@ -21,7 +21,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   bool isSearching = false;
   bool isAdding = false;
 
-  // Search user by email
   Future<void> searchUser() async {
     final email = emailController.text.trim();
 
@@ -49,7 +48,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     }
   }
 
-  // Add found user to group
   Future<void> addMember() async {
     if (foundUser == null) {
       return;
@@ -92,7 +90,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Email input
             TextField(
               controller: emailController,
               keyboardType: TextInputType.emailAddress,
@@ -106,7 +103,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
             const SizedBox(height: 20),
 
-            // Search button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -119,7 +115,6 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
             const SizedBox(height: 30),
 
-            // Show found user
             if (foundUser != null)
               Card(
                 child: Padding(
