@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:fair_share_app/models/settlement_model.dart';
 import 'package:fair_share_app/services/settlement_service.dart';
@@ -11,23 +13,28 @@ class SettlementProvider extends ChangeNotifier {
 
   String? errorMessage;
 
-  Future<void> addSettlement(SettlementModel settlement) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
+  StreamSubscription<List<SettlementModel>>? _settlementsSubscription;
 
-      await _settlementService.addSettlement(settlement);
+  void listenToSettlements(String groupId) {
+    isLoading = true;
+    notifyListeners();
 
-      settlements.add(settlement);
+    _settlementsSubscription?.cancel();
 
-      isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      isLoading = false;
-      errorMessage = e.toString();
-      notifyListeners();
-    }
+    _settlementsSubscription = _settlementService
+        .streamSettlements(groupId)
+        .listen(
+          (settlementList) {
+            settlements = settlementList;
+            isLoading = false;
+            notifyListeners();
+          },
+          onError: (e) {
+            isLoading = false;
+            errorMessage = e.toString();
+            notifyListeners();
+          },
+        );
   }
 
   Future<void> loadSettlements(String groupId) async {
@@ -47,18 +54,28 @@ class SettlementProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteSettlement(String settlementId) async {
+  Future<void> addSettlement(SettlementModel settlement) async {
     try {
-      await _settlementService.deleteSettlement(settlementId);
-
-      settlements.removeWhere(
-        (settlement) => settlement.id == settlementId,
-      );
-
-      notifyListeners();
+      errorMessage = null;
+      await _settlementService.addSettlement(settlement);
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
     }
+  }
+
+  Future<void> deleteSettlement(String settlementId) async {
+    try {
+      await _settlementService.deleteSettlement(settlementId);
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _settlementsSubscription?.cancel();
+    super.dispose();
   }
 }

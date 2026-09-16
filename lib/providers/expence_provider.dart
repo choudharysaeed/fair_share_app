@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fair_share_app/models/expence_model.dart';
 import 'package:fair_share_app/services/expence_service.dart';
 import 'package:flutter/foundation.dart';
@@ -11,23 +13,25 @@ class ExpenseProvider extends ChangeNotifier {
 
   String? errorMessage;
 
-  Future<void> addExpense(ExpenseModel expense) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
+  StreamSubscription<List<ExpenseModel>>? _expensesSubscription;
+  void listenToExpenses(String groupId) {
+    isLoading = true;
+    notifyListeners();
 
-      await _expenseService.addExpense(expense);
+    _expensesSubscription?.cancel();
 
-      expenses.add(expense);
-
-      isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      isLoading = false;
-      errorMessage = e.toString();
-      notifyListeners();
-    }
+    _expensesSubscription = _expenseService.streamExpenses(groupId).listen(
+      (expenseList) {
+        expenses = expenseList;
+        isLoading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        isLoading = false;
+        errorMessage = e.toString();
+        notifyListeners();
+      },
+    );
   }
 
   Future<void> loadExpenses(String groupId) async {
@@ -47,24 +51,21 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> addExpense(ExpenseModel expense) async {
+    try {
+      errorMessage = null;
+      await _expenseService.addExpense(expense);
+    } catch (e) {
+      errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
   Future<void> updateExpense(ExpenseModel expense) async {
     try {
-      isLoading = true;
       errorMessage = null;
-      notifyListeners();
-
       await _expenseService.updateExpense(expense);
-
-      final index = expenses.indexWhere((item) => item.id == expense.id);
-
-      if (index != -1) {
-        expenses[index] = expense;
-      }
-
-      isLoading = false;
-      notifyListeners();
     } catch (e) {
-      isLoading = false;
       errorMessage = e.toString();
       notifyListeners();
     }
@@ -72,11 +73,8 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> deleteExpense(String expenseId) async {
     try {
+      errorMessage = null;
       await _expenseService.deleteExpense(expenseId);
-
-      expenses.removeWhere((expense) => expense.id == expenseId);
-
-      notifyListeners();
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
@@ -85,30 +83,31 @@ class ExpenseProvider extends ChangeNotifier {
 
   double getMemberPaidAmount(String memberId) {
     double totalPaid = 0;
-
     for (final expense in expenses) {
       if (expense.paidBy == memberId) {
         totalPaid += expense.amount;
       }
     }
-
     return totalPaid;
   }
 
   double getMemberShareAmount(String memberId) {
     double totalShare = 0;
-
     for (final expense in expenses) {
       totalShare += expense.splits[memberId]?.toDouble() ?? 0;
     }
-
     return totalShare;
   }
 
   double getMemberBalance(String memberId) {
     final paid = getMemberPaidAmount(memberId);
     final share = getMemberShareAmount(memberId);
-
     return paid - share;
+  }
+
+  @override
+  void dispose() {
+    _expensesSubscription?.cancel();
+    super.dispose();
   }
 }

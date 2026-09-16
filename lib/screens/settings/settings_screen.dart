@@ -1,3 +1,4 @@
+import 'package:fair_share_app/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fair_share_app/providers/auth_provider.dart';
@@ -10,18 +11,18 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Dark mode abhi local UI state hai.
-  // Baad mein isko proper app theme ke saath connect karenge.
-  bool isDarkMode = false;
-
-  // Notifications ka switch
+ 
+ 
   bool notificationsEnabled = true;
 
-  // Selected currency
-  String selectedCurrency = 'PKR';
 
+  String selectedCurrency = 'PKR';
+  
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return Scaffold(
       backgroundColor:
           isDarkMode ? const Color(0xFF101918) : const Color(0xFFF4F8F7),
@@ -46,9 +47,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // =========================
-          // PROFILE SECTION
-          // =========================
 
           _sectionTitle(
             'PROFILE',
@@ -89,16 +87,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               onTap: () {
-                // Profile screen baad mein connect karenge.
               },
             ),
           ),
 
           const SizedBox(height: 25),
-
-          // =========================
-          // PREFERENCES
-          // =========================
 
           _sectionTitle(
             'PREFERENCES',
@@ -111,7 +104,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isDarkMode: isDarkMode,
             child: Column(
               children: [
-                // Currency
                 ListTile(
                   contentPadding: EdgeInsets.zero,
 
@@ -167,7 +159,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : Colors.black12,
                 ),
 
-                // Notifications
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
 
@@ -230,10 +221,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   activeTrackColor: const Color(0xFF087F75),
 
-                  onChanged: (value) {
-                    setState(() {
-                      isDarkMode = value;
-                    });
+                    onChanged: (value) {
+                    Provider.of<ThemeProvider>(
+                      context,
+                      listen: false,
+                    ).toggleTheme(value);
                   },
                 ),
               ],
@@ -241,10 +233,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SizedBox(height: 25),
-
-          // =========================
-          // ACCOUNT
-          // =========================
 
           _sectionTitle(
             'ACCOUNT',
@@ -277,7 +265,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               onTap: () {
-                // Existing AuthProvider logout method
                 Provider.of<AuthProvider>(
                   context,
                   listen: false,
@@ -287,8 +274,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SizedBox(height: 30),
-
-          // App version
           Center(
             child: Text(
               'FairShare',
@@ -319,10 +304,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // =========================
-  // SECTION TITLE
-  // =========================
-
   Widget _sectionTitle(
     String title,
     bool darkMode,
@@ -339,10 +320,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  // =========================
-  // SETTINGS CARD
-  // =========================
 
   Widget _settingsCard({
     required bool isDarkMode,
@@ -363,10 +340,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // =========================
-  // TITLE STYLE
-  // =========================
-
   TextStyle _titleStyle(bool darkMode) {
     return TextStyle(
       color: darkMode
@@ -376,10 +349,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       fontWeight: FontWeight.bold,
     );
   }
-
-  // =========================
-  // SUBTITLE STYLE
-  // =========================
 
   TextStyle _subtitleStyle(bool darkMode) {
     return TextStyle(

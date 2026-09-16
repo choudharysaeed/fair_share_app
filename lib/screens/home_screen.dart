@@ -12,6 +12,8 @@ import 'package:fair_share_app/screens/settings/settings_screen.dart';
 
 import 'package:fair_share_app/services/firestore_service.dart';
 import 'package:fair_share_app/services/expence_service.dart';
+import 'package:fair_share_app/services/settlement_service.dart';
+import 'package:fair_share_app/services/balance_calculator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final FirestoreService _firestoreService = FirestoreService();
   final ExpenseService _expenseService = ExpenseService();
+  final SettlementService _settlementService = SettlementService();
 
   @override
   void initState() {
@@ -54,21 +57,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     for (final group in groups) {
       final expenses = await _expenseService.getExpenses(group.id);
+      final settlements = await _settlementService.getSettlements(group.id);
 
-      double groupBalance = 0;
+      final balances = BalanceCalculator.calculateBalances(
+        memberIds: List<String>.from(group.memberIds),
+        expenses: expenses,
+        settlements: settlements,
+      );
 
-      for (final expense in expenses) {
-        double paid = 0;
-        double share = 0;
-
-        if (expense.paidBy == currentUserId) {
-          paid = expense.amount;
-        }
-
-        share = expense.splits[currentUserId]?.toDouble() ?? 0;
-
-        groupBalance += paid - share;
-      }
+      final groupBalance = balances[currentUserId] ?? 0;
 
       if (groupBalance > 0) {
         totalOwed += groupBalance;
@@ -440,29 +437,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Ab settlements bhi shamil hain — sirf expenses se calculate nahi ho raha.
   Future<double> _getGroupBalance(dynamic group) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
-    final expenses =
-        await _expenseService.getExpenses(group.id);
+    final expenses = await _expenseService.getExpenses(group.id);
+    final settlements = await _settlementService.getSettlements(group.id);
 
-    double balance = 0;
+    final balances = BalanceCalculator.calculateBalances(
+      memberIds: List<String>.from(group.memberIds),
+      expenses: expenses,
+      settlements: settlements,
+    );
 
-    for (final expense in expenses) {
-      double paid = 0;
-      double share = 0;
-
-      if (expense.paidBy == currentUserId) {
-        paid = expense.amount;
-      }
-
-      share =
-          expense.splits[currentUserId]?.toDouble() ?? 0;
-
-      balance += paid - share;
-    }
-
-    return balance;
+    return balances[currentUserId] ?? 0;
   }
 
   Widget _buildEmptyGroups() {

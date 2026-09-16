@@ -28,7 +28,7 @@ class _ExpenseHistoryScreenState extends State<ExpenseHistoryScreen> {
       Provider.of<ExpenseProvider>(
         context,
         listen: false,
-      ).loadExpenses(widget.groupId);
+      ).listenToExpenses(widget.groupId);
     });
   }
 

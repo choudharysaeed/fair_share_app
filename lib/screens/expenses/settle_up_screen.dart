@@ -1,5 +1,7 @@
+import 'package:fair_share_app/services/balance_calculator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:fair_share_app/models/group_model.dart';
 import 'package:fair_share_app/models/settlement_model.dart';
@@ -37,27 +39,27 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
     _calculateSettlements();
   }
 
-  // Calculate minimum payments for this group.
   Future<void> _calculateSettlements() async {
     final expenseProvider = Provider.of<ExpenseProvider>(
       context,
       listen: false,
     );
+    final settlementProvider = Provider.of<SettlementProvider>(
+      context,
+      listen: false,
+    );
 
-    // Load all expenses of this group.
     await expenseProvider.loadExpenses(widget.group.id);
+    await settlementProvider.loadSettlements(widget.group.id);
 
-    // Create balance map for all group members.
-    final Map<String, double> balances = {};
+    final balances = BalanceCalculator.calculateBalances(
+      memberIds: widget.group.memberIds,
+      expenses: expenseProvider.expenses,
+      settlements: settlementProvider.settlements,
+    );
 
-    for (final memberId in widget.group.memberIds) {
-      balances[memberId] =
-          expenseProvider.getMemberBalance(memberId);
-    }
-
-    // Settlement Engine calculates minimum payments.
-    final result =
-        _settlementEngine.calculateSettlements(balances);
+    // Settlement Engine ab sahi (settled) balances pe kaam karega.
+    final result = _settlementEngine.calculateSettlements(balances);
 
     if (mounted) {
       setState(() {
@@ -101,7 +103,7 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
         fromUserId: settlement['fromUserId'],
         toUserId: settlement['toUserId'],
         amount: (settlement['amount'] as num).toDouble(),
-        createdAt: DateTime.now() as dynamic,
+        createdAt: Timestamp.now(),
       );
 
       await settlementProvider.addSettlement(newSettlement);

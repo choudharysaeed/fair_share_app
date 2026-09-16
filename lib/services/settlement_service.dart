@@ -22,6 +22,18 @@ class SettlementService {
     }).toList();
   }
 
+  Stream<List<SettlementModel>> streamSettlements(String groupId) {
+    return _firestore
+        .collection('settlements')
+        .where('groupId', isEqualTo: groupId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return SettlementModel.fromMap(doc.data());
+          }).toList();
+        });
+  }
+
   Future<void> deleteSettlement(String settlementId) async {
     await _firestore
         .collection('settlements')
