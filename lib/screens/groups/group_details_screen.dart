@@ -1,6 +1,7 @@
 import 'package:fair_share_app/models/group_model.dart';
 import 'package:fair_share_app/screens/expenses/balance_screen.dart';
 import 'package:fair_share_app/screens/expenses/expense_history_screen.dart';
+import 'package:fair_share_app/screens/expenses/settle_up_screen.dart';
 import 'package:fair_share_app/screens/groups/add_member_screen.dart';
 import 'package:fair_share_app/screens/expenses/add_expense_screen.dart';
 import 'package:fair_share_app/services/firestore_service.dart';
@@ -171,6 +172,16 @@ class GroupDetailsScreen extends StatelessWidget {
               );
             },
             child: Icon(Icons.account_balance_wallet),
+          ),
+          FloatingActionButton(onPressed: (){
+            Navigator.push(
+              context, MaterialPageRoute(
+                builder:(context)=>SettleUpScreen(
+                  group: group,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

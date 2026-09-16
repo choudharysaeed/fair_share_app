@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fair_share_app/models/activity_model.dart';
 import 'package:fair_share_app/models/expence_model.dart';
+import 'package:fair_share_app/providers/activity_provider.dart';
 import 'package:fair_share_app/providers/expence_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,7 +25,8 @@ class AddExpenseScreen extends StatefulWidget {
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _descriptionController =
+      TextEditingController();
 
   final TextEditingController _amountController = TextEditingController();
 
@@ -80,7 +83,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
   }
 
-  Map<String, num> _calculateEqualSplit(List<String> memberIds, double amount) {
+  Map<String, num> _calculateEqualSplit(
+    List<String> memberIds,
+    double amount,
+  ) {
     final int totalCents = (amount * 100).round();
 
     final int basicShare = totalCents ~/ memberIds.length;
@@ -90,7 +96,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final Map<String, num> splits = {};
 
     for (int i = 0; i < memberIds.length; i++) {
-      final int memberCents = basicShare + (i < remainder ? 1 : 0);
+      final int memberCents =
+          basicShare + (i < remainder ? 1 : 0);
 
       splits[memberIds[i]] = memberCents / 100;
     }
@@ -104,12 +111,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     double total = 0;
 
     for (final memberId in widget.memberIds) {
-      final String text = _exactControllers[memberId]!.text.trim();
+      final String text =
+          _exactControllers[memberId]!.text.trim();
 
       final double? memberAmount = double.tryParse(text);
 
       if (memberAmount == null || memberAmount < 0) {
-        _showError('Please enter valid amounts for all members.');
+        _showError(
+          'Please enter valid amounts for all members.',
+        );
         return null;
       }
 
@@ -122,7 +132,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final int amountCents = (amount * 100).round();
 
     if (totalCents != amountCents) {
-      _showError('Exact split total must equal expense amount.');
+      _showError(
+        'Exact split total must equal expense amount.',
+      );
       return null;
     }
 
@@ -135,12 +147,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     double totalShares = 0;
 
     for (final memberId in widget.memberIds) {
-      final String text = _shareControllers[memberId]!.text.trim();
+      final String text =
+          _shareControllers[memberId]!.text.trim();
 
       final double? memberShares = double.tryParse(text);
 
       if (memberShares == null || memberShares <= 0) {
-        _showError('Please enter valid shares for all members.');
+        _showError(
+          'Please enter valid shares for all members.',
+        );
         return null;
       }
 
@@ -150,7 +165,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
 
     if (totalShares <= 0) {
-      _showError('Total shares must be greater than zero.');
+      _showError(
+        'Total shares must be greater than zero.',
+      );
       return null;
     }
 
@@ -165,14 +182,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     for (int i = 0; i < memberIds.length; i++) {
       final String memberId = memberIds[i];
 
-      final double memberShares = shares[memberId]!.toDouble();
+      final double memberShares =
+          shares[memberId]!.toDouble();
 
       int memberCents;
 
       if (i == memberIds.length - 1) {
         memberCents = totalCents - usedCents;
       } else {
-        memberCents = (totalCents * memberShares / totalShares).round();
+        memberCents =
+            (totalCents * memberShares / totalShares).round();
 
         usedCents += memberCents;
       }
@@ -184,8 +203,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Future<void> _addExpense() async {
@@ -193,12 +213,16 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       return;
     }
 
-    final double amount = double.parse(_amountController.text.trim());
+    final double amount =
+        double.parse(_amountController.text.trim());
 
     Map<String, num>? splits;
 
     if (_selectedSplitType == SplitType.equal) {
-      splits = _calculateEqualSplit(widget.memberIds, amount);
+      splits = _calculateEqualSplit(
+        widget.memberIds,
+        amount,
+      );
     } else if (_selectedSplitType == SplitType.exact) {
       splits = _calculateExactSplit(amount);
     } else if (_selectedSplitType == SplitType.shares) {
@@ -211,23 +235,14 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
     final expense = ExpenseModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-
       groupId: widget.groupId,
-
       description: _descriptionController.text.trim(),
-
       amount: amount,
-
       paidBy: _selectedPayerId,
-
       splitType: _selectedSplitType,
-
       splits: splits,
-
       date: Timestamp.fromDate(_selectedDate),
-
       createdBy: widget.currentUserId,
-
       createdAt: Timestamp.now(),
     );
 
@@ -237,10 +252,37 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     ).addExpense(expense);
 
     if (!mounted) return;
+    final activity = ActivityModel(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      userId: widget.currentUserId,
+      groupId: widget.groupId,
 
-    ScaffoldMessenger.of(
+      groupName: 'Group',
+
+      type: 'expense_added',
+
+      title: 'Expense added',
+
+      description:
+          '${_descriptionController.text.trim()} was added',
+
+      amount: amount,
+
+      createdAt: Timestamp.now(),
+    );
+
+    await Provider.of<ActivityProvider>(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Expense added successfully')));
+      listen: false,
+    ).addActivity(activity);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Expense added successfully',
+        ),
+      ),
+    );
 
     Navigator.pop(context);
   }
@@ -248,7 +290,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Expense')),
+      appBar: AppBar(
+        title: const Text('Add Expense'),
+      ),
 
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -268,7 +312,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 ),
 
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'Please enter description';
                   }
 
@@ -281,7 +326,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               TextFormField(
                 controller: _amountController,
 
-                keyboardType: const TextInputType.numberWithOptions(
+                keyboardType:
+                    const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
 
@@ -292,7 +338,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 ),
 
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'Please enter amount';
                   }
 
@@ -333,6 +380,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               ),
 
               const SizedBox(height: 16),
+
               DropdownButtonFormField<SplitType>(
                 initialValue: _selectedSplitType,
 
@@ -361,7 +409,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
               if (_selectedSplitType == SplitType.exact)
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Enter exact amount for each member',
@@ -375,17 +424,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                     ...widget.memberIds.map((memberId) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding:
+                            const EdgeInsets.only(bottom: 12),
                         child: TextFormField(
-                          controller: _exactControllers[memberId],
+                          controller:
+                              _exactControllers[memberId],
 
-                          keyboardType: const TextInputType.numberWithOptions(
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
 
                           decoration: InputDecoration(
-                            labelText: 'Amount for $memberId',
-                            border: const OutlineInputBorder(),
+                            labelText:
+                                'Amount for $memberId',
+                            border:
+                                const OutlineInputBorder(),
                           ),
                         ),
                       );
@@ -395,7 +449,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
               if (_selectedSplitType == SplitType.shares)
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Enter shares for each member',
@@ -409,17 +464,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                     ...widget.memberIds.map((memberId) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding:
+                            const EdgeInsets.only(bottom: 12),
                         child: TextFormField(
-                          controller: _shareControllers[memberId],
+                          controller:
+                              _shareControllers[memberId],
 
-                          keyboardType: const TextInputType.numberWithOptions(
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
 
                           decoration: InputDecoration(
-                            labelText: 'Shares for $memberId',
-                            border: const OutlineInputBorder(),
+                            labelText:
+                                'Shares for $memberId',
+                            border:
+                                const OutlineInputBorder(),
                           ),
                         ),
                       );
@@ -449,13 +509,15 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
               Consumer<ExpenseProvider>(
                 builder: (context, provider, child) {
                   return ElevatedButton(
-                    onPressed: provider.isLoading ? null : _addExpense,
+                    onPressed:
+                        provider.isLoading ? null : _addExpense,
 
                     child: provider.isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(),
+                            child:
+                                CircularProgressIndicator(),
                           )
                         : const Text('Add Expense'),
                   );
