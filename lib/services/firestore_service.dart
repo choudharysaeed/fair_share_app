@@ -20,18 +20,20 @@ class FirestoreService {
     });
   }
 
-  Future<void> createGroup({
+    Future<String> createGroup({
     required String name,
     required String createdBy,
     required String currency,
   }) async {
-    await _firestore.collection('groups').add({
+    final docRef = await _firestore.collection('groups').add({
       'name': name,
       'memberIds': [createdBy],
       'createdBy': createdBy,
       'currency': currency,
       'createdAt': Timestamp.now(),
     });
+
+    return docRef.id;
   }
 
   Future<Map<String, dynamic>?> getUserById(String userId) async {

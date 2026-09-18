@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 class AddMemberScreen extends StatefulWidget {
   final GroupModel group;
 
-  const AddMemberScreen({super.key, required this.group});
+  const AddMemberScreen({
+    super.key,
+    required this.group,
+  });
 
   @override
   State<AddMemberScreen> createState() => _AddMemberScreenState();
@@ -22,11 +25,14 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   bool isAdding = false;
 
   Future<void> searchUser() async {
-    final email = emailController.text.trim();
+    final email = emailController.text.trim().toLowerCase();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Please enter email")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please enter email"),
+        ),
+      );
       return;
     }
 
@@ -35,16 +41,35 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       foundUser = null;
     });
 
-    final user = await _firestoreService.getUserByEmail(email);
+    try {
+      final user = await _firestoreService.getUserByEmail(email);
 
-    setState(() {
-      foundUser = user;
-      isSearching = false;
-    });
+      if (!mounted) return;
 
-    if (user == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("User not found")));
+      setState(() {
+        foundUser = user;
+        isSearching = false;
+      });
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("User not found"),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isSearching = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error searching user: $e"),
+        ),
+      );
     }
   }
 
@@ -55,24 +80,60 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
     final userId = foundUser!['id'];
 
+    if (userId == null || userId.toString().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("User ID not found"),
+        ),
+      );
+      return;
+    }
+
+    if (widget.group.memberIds.contains(userId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("User is already a group member"),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       isAdding = true;
     });
 
-    await _firestoreService.addMemberToGroup(
-      groupId: widget.group.id,
-      userId: userId,
-    );
+    try {
+      await _firestoreService.addMemberToGroup(
+        groupId: widget.group.id,
+        userId: userId,
+      );
 
-    setState(() {
-      isAdding = false;
-    });
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Member added successfully")));
+      setState(() {
+        isAdding = false;
+      });
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Member added successfully"),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isAdding = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to add member: $e"),
+        ),
+      );
+    }
   }
 
   @override
@@ -84,8 +145,10 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Add Member"), centerTitle: true),
-
+      appBar: AppBar(
+        title: const Text("Add Member"),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -108,7 +171,13 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
               child: ElevatedButton(
                 onPressed: isSearching ? null : searchUser,
                 child: isSearching
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
                     : const Text("Search User"),
               ),
             ),
@@ -123,7 +192,10 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                     children: [
                       const CircleAvatar(
                         radius: 30,
-                        child: Icon(Icons.person, size: 30),
+                        child: Icon(
+                          Icons.person,
+                          size: 30,
+                        ),
                       ),
 
                       const SizedBox(height: 10),
@@ -141,7 +213,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
                       Text(
                         foundUser!['email'] ?? '',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(
+                          fontSize: 16,
+                        ),
                       ),
 
                       const SizedBox(height: 15),
@@ -151,7 +225,13 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                         child: ElevatedButton(
                           onPressed: isAdding ? null : addMember,
                           child: isAdding
-                              ? const CircularProgressIndicator()
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text("Add Member"),
                         ),
                       ),

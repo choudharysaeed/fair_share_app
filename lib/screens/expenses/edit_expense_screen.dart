@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fair_share_app/models/expence_model.dart';
 import 'package:fair_share_app/providers/expence_provider.dart';
+import 'package:fair_share_app/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -31,6 +32,14 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   final Map<String, TextEditingController> _exactControllers = {};
   final Map<String, TextEditingController> _shareControllers = {};
 
+  final FirestoreService _firestoreService = FirestoreService();
+
+  Map<String, String> _memberNames = {};
+
+  bool _isLoadingNames = true;
+
+  late Set<String> _includedMembers;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +57,12 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
     _selectedDate = widget.expense.date.toDate();
 
+    // Equal split ke liye: jo members expense mein pehle se shamil the
+    // (splits map ki keys), unhi ko checked dikhao.
+    _includedMembers = widget.expense.splitType == SplitType.equal
+        ? Set<String>.from(widget.expense.splits.keys)
+        : Set<String>.from(widget.memberIds);
+
     for (final memberId in widget.memberIds) {
       final existingValue = widget.expense.splits[memberId];
 
@@ -55,6 +70,32 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         text: existingValue?.toString() ?? '',
       );
       _shareControllers[memberId] = TextEditingController(text: '1');
+    }
+
+    _loadMemberNames();
+  }
+
+  Future<void> _loadMemberNames() async {
+    final Map<String, String> names = {};
+
+    for (final memberId in widget.memberIds) {
+      final userData = await _firestoreService.getUserById(memberId);
+
+      if (userData != null) {
+        final firstName = userData['firstName'] ?? '';
+        final lastName = userData['lastName'] ?? '';
+        final fullName = '$firstName $lastName'.trim();
+        names[memberId] = fullName.isEmpty ? memberId : fullName;
+      } else {
+        names[memberId] = memberId;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _memberNames = names;
+        _isLoadingNames = false;
+      });
     }
   }
 
@@ -89,19 +130,22 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
   }
 
-  Map<String, num> _calculateEqualSplit(double amount) {
+  Map<String, num> _calculateEqualSplit(
+    List<String> memberIds,
+    double amount,
+  ) {
     final int totalCents = (amount * 100).round();
 
-    final int basicShare = totalCents ~/ widget.memberIds.length;
+    final int basicShare = totalCents ~/ memberIds.length;
 
-    final int remainder = totalCents % widget.memberIds.length;
+    final int remainder = totalCents % memberIds.length;
 
     final Map<String, num> splits = {};
 
-    for (int i = 0; i < widget.memberIds.length; i++) {
+    for (int i = 0; i < memberIds.length; i++) {
       final int memberCents = basicShare + (i < remainder ? 1 : 0);
 
-      splits[widget.memberIds[i]] = memberCents / 100;
+      splits[memberIds[i]] = memberCents / 100;
     }
 
     return splits;
@@ -193,7 +237,11 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     Map<String, num>? splits;
 
     if (_selectedSplitType == SplitType.equal) {
-      splits = _calculateEqualSplit(amount);
+      if (_includedMembers.isEmpty) {
+        _showError('Please select at least one member to split with.');
+        return;
+      }
+      splits = _calculateEqualSplit(_includedMembers.toList(), amount);
     } else if (_selectedSplitType == SplitType.exact) {
       splits = _calculateExactSplit(amount);
     } else if (_selectedSplitType == SplitType.shares) {
@@ -205,23 +253,14 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
     }
     final updatedExpense = ExpenseModel(
       id: widget.expense.id,
-
       groupId: widget.expense.groupId,
-
       description: _descriptionController.text.trim(),
-
       amount: amount,
-
       paidBy: _selectedPayerId,
-
       splitType: _selectedSplitType,
-
       splits: splits,
-
       date: Timestamp.fromDate(_selectedDate),
-
       createdBy: widget.expense.createdBy,
-
       createdAt: widget.expense.createdAt,
     );
 
@@ -243,221 +282,233 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Expense')),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-
-        child: Form(
-          key: _formKey,
-
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _descriptionController,
-
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter description';
-                  }
-
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _amountController,
-
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  border: OutlineInputBorder(),
-                ),
-
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter amount';
-                  }
-
-                  final amount = double.tryParse(value);
-
-                  if (amount == null || amount <= 0) {
-                    return 'Please enter a valid amount';
-                  }
-
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                initialValue: _selectedPayerId,
-
-                decoration: const InputDecoration(
-                  labelText: 'Paid By',
-                  border: OutlineInputBorder(),
-                ),
-
-                items: widget.memberIds.map((memberId) {
-                  return DropdownMenuItem<String>(
-                    value: memberId,
-                    child: Text(memberId),
-                  );
-                }).toList(),
-
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedPayerId = value;
-                    });
-                  }
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<SplitType>(
-                initialValue: _selectedSplitType,
-
-                decoration: const InputDecoration(
-                  labelText: 'Split Type',
-                  border: OutlineInputBorder(),
-                ),
-
-                items: SplitType.values.map((type) {
-                  return DropdownMenuItem<SplitType>(
-                    value: type,
-                    child: Text(type.name),
-                  );
-                }).toList(),
-
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedSplitType = value;
-                    });
-                  }
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              if (_selectedSplitType == SplitType.exact)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      body: _isLoadingNames
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: ListView(
                   children: [
-                    const Text(
-                      'Exact Amount',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter description';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _amountController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Amount',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter amount';
+                        }
+                        final amount = double.tryParse(value);
+                        if (amount == null || amount <= 0) {
+                          return 'Please enter a valid amount';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedPayerId,
+                      decoration: const InputDecoration(
+                        labelText: 'Paid By',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: widget.memberIds.map((memberId) {
+                        return DropdownMenuItem<String>(
+                          value: memberId,
+                          child: Text(_memberNames[memberId] ?? memberId),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedPayerId = value;
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<SplitType>(
+                      initialValue: _selectedSplitType,
+                      decoration: const InputDecoration(
+                        labelText: 'Split Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: SplitType.values.map((type) {
+                        return DropdownMenuItem<SplitType>(
+                          value: type,
+                          child: Text(type.name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedSplitType = value;
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    if (_selectedSplitType == SplitType.equal)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Split equally between',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          ...widget.memberIds.map((memberId) {
+                            final isIncluded =
+                                _includedMembers.contains(memberId);
+
+                            return CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                _memberNames[memberId] ?? memberId,
+                              ),
+                              value: isIncluded,
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _includedMembers.add(memberId);
+                                  } else {
+                                    _includedMembers.remove(memberId);
+                                  }
+                                });
+                              },
+                            );
+                          }),
+                        ],
+                      ),
+
+                    if (_selectedSplitType == SplitType.exact)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Exact Amount',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...widget.memberIds.map((memberId) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: TextFormField(
+                                controller: _exactControllers[memberId],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Amount for ${_memberNames[memberId] ?? memberId}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+
+                    if (_selectedSplitType == SplitType.shares)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Shares',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...widget.memberIds.map((memberId) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: TextFormField(
+                                controller: _shareControllers[memberId],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText:
+                                      'Shares for ${_memberNames[memberId] ?? memberId}',
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Expense Date'),
+                      subtitle: Text(
+                        '${_selectedDate.day}/'
+                        '${_selectedDate.month}/'
+                        '${_selectedDate.year}',
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: _selectDate,
+                        child: const Text('Select Date'),
                       ),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
 
-                    ...widget.memberIds.map((memberId) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: TextFormField(
-                          controller: _exactControllers[memberId],
-
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-
-                          decoration: InputDecoration(
-                            labelText: 'Amount for $memberId',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-
-              if (_selectedSplitType == SplitType.shares)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Shares',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Consumer<ExpenseProvider>(
+                      builder: (context, provider, child) {
+                        return ElevatedButton(
+                          onPressed: provider.isLoading ? null : _updateExpense,
+                          child: provider.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(),
+                                )
+                              : const Text('Update Expense'),
+                        );
+                      },
                     ),
-
-                    const SizedBox(height: 12),
-
-                    ...widget.memberIds.map((memberId) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: TextFormField(
-                          controller: _shareControllers[memberId],
-
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-
-                          decoration: InputDecoration(
-                            labelText: 'Shares for $memberId',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      );
-                    }),
                   ],
                 ),
-
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-
-                title: const Text('Expense Date'),
-
-                subtitle: Text(
-                  '${_selectedDate.day}/'
-                  '${_selectedDate.month}/'
-                  '${_selectedDate.year}',
-                ),
-
-                trailing: ElevatedButton(
-                  onPressed: _selectDate,
-                  child: const Text('Select Date'),
-                ),
               ),
-
-              const SizedBox(height: 24),
-
-              Consumer<ExpenseProvider>(
-                builder: (context, provider, child) {
-                  return ElevatedButton(
-                    onPressed: provider.isLoading ? null : _updateExpense,
-
-                    child: provider.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(),
-                          )
-                        : const Text('Update Expense'),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

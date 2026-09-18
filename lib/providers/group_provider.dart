@@ -13,7 +13,7 @@ class GroupProvider extends ChangeNotifier {
 
   StreamSubscription<List<GroupModel>>? _groupsSubscription;
 
-  Future<void> createGroup({
+  Future<String> createGroup({
     required String name,
     required String userId,
     required String currency,
@@ -21,7 +21,7 @@ class GroupProvider extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
 
-    await _firestoreService.createGroup(
+    final groupId = await _firestoreService.createGroup(
       name: name,
       createdBy: userId,
       currency: currency,
@@ -29,6 +29,18 @@ class GroupProvider extends ChangeNotifier {
 
     isLoading = false;
     notifyListeners();
+
+    return groupId;
+  }
+
+  Future<void> addMemberToGroup({
+    required String groupId,
+    required String userId,
+  }) async {
+    await _firestoreService.addMemberToGroup(
+      groupId: groupId,
+      userId: userId,
+    );
   }
 
   void listenToGroups(String userId) {

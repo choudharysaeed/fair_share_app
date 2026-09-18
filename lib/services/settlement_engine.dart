@@ -1,21 +1,23 @@
 class SettlementEngine {
-  
   List<Map<String, dynamic>> calculateSettlements(
     Map<String, double> balances,
   ) {
-    final List<Map<String, dynamic>> debtors = [];
 
+    final List<Map<String, dynamic>> debtors = [];
     final List<Map<String, dynamic>> creditors = [];
+
     balances.forEach((userId, balance) {
-      if (balance < 0) {
+      final int cents = (balance * 100).round();
+
+      if (cents < 0) {
         debtors.add({
           'userId': userId,
-          'amount': -balance,
+          'amountCents': -cents,
         });
-      } else if (balance > 0) {
+      } else if (cents > 0) {
         creditors.add({
           'userId': userId,
-          'amount': balance,
+          'amountCents': cents,
         });
       }
     });
@@ -25,30 +27,29 @@ class SettlementEngine {
     int debtorIndex = 0;
     int creditorIndex = 0;
 
-    while (
-        debtorIndex < debtors.length &&
-        creditorIndex < creditors.length) {
-      
+    while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
       final debtor = debtors[debtorIndex];
       final creditor = creditors[creditorIndex];
 
-      final double payment = debtor['amount'] < creditor['amount']
-          ? debtor['amount']
-          : creditor['amount'];
+      final int debtorCents = debtor['amountCents'];
+      final int creditorCents = creditor['amountCents'];
+
+      final int paymentCents =
+          debtorCents < creditorCents ? debtorCents : creditorCents;
 
       settlements.add({
         'fromUserId': debtor['userId'],
-        'toUserId': creditor['userId'],
-        'amount': payment,
+        'amount': paymentCents / 100,
       });
-      debtor['amount'] -= payment;
-      creditor['amount'] -= payment;
 
-      if (debtor['amount'] == 0) {
+      debtor['amountCents'] = debtorCents - paymentCents;
+      creditor['amountCents'] = creditorCents - paymentCents;
+
+      if (debtor['amountCents'] == 0) {
         debtorIndex++;
       }
 
-      if (creditor['amount'] == 0) {
+      if (creditor['amountCents'] == 0) {
         creditorIndex++;
       }
     }

@@ -21,6 +21,18 @@ class ExpenseService {
       return ExpenseModel.fromMap(doc.data(), doc.id);
     }).toList();
   }
+  
+  Stream<List<ExpenseModel>> streamExpenses(String groupId) {
+    return _firestore
+        .collection('expenses')
+        .where('groupId', isEqualTo: groupId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs.map((doc) {
+            return ExpenseModel.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
+  }
 
   Future<void> updateExpense(ExpenseModel expense) async {
     await _firestore
