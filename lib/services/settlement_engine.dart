@@ -39,6 +39,7 @@ class SettlementEngine {
 
       settlements.add({
         'fromUserId': debtor['userId'],
+        'toUserId': creditor['userId'],
         'amount': paymentCents / 100,
       });
 
