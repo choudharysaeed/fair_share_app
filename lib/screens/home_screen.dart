@@ -14,6 +14,7 @@ import 'package:fair_share_app/services/firestore_service.dart';
 import 'package:fair_share_app/services/expence_service.dart';
 import 'package:fair_share_app/services/settlement_service.dart';
 import 'package:fair_share_app/services/balance_calculator.dart';
+import 'package:fair_share_app/utils/theme_color.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -90,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8F7),
+      backgroundColor: AppColors.pageBackground(context),
 
       body: screens[_selectedIndex],
 
@@ -108,14 +109,15 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onNavigationChanged,
 
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface(context),
 
         selectedItemColor: const Color(0xFF087F75),
-        unselectedItemColor: const Color(0xFF6B7A78),
+        unselectedItemColor: AppColors.secondaryText(context),
 
         selectedFontSize: 11,
         unselectedFontSize: 11,
@@ -153,13 +155,13 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Your groups',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF172B3A),
+                      color: AppColors.primaryText(context),
                     ),
                   ),
                 ),
@@ -170,16 +172,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     String initials = 'U';
 
                     if (snapshot.hasData && snapshot.data != null) {
-                      final firstName =
-                          snapshot.data!['firstName'] ?? '';
-                      final lastName =
-                          snapshot.data!['lastName'] ?? '';
+                      final firstName = snapshot.data!['firstName'] ?? '';
+                      final lastName = snapshot.data!['lastName'] ?? '';
 
-                      if (firstName.isNotEmpty &&
-                          lastName.isNotEmpty) {
-                        initials =
-                            '${firstName[0]}${lastName[0]}'
-                                .toUpperCase();
+                      if (firstName.isNotEmpty && lastName.isNotEmpty) {
+                        initials = '${firstName[0]}${lastName[0]}'
+                            .toUpperCase();
                       } else if (firstName.isNotEmpty) {
                         initials = firstName[0].toUpperCase();
                       }
@@ -213,17 +211,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   children: [
                     FutureBuilder<double>(
-                      future: _getOverallOwed(
-                        groups,
-                        currentUserId,
-                      ),
+                      future: _getOverallOwed(groups, currentUserId),
                       builder: (context, snapshot) {
                         final amount = snapshot.data ?? 0;
 
                         return Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -231,8 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
                                 "OVERALL YOU'RE OWED",
@@ -273,14 +265,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 20),
 
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'GROUPS',
                           style: TextStyle(
-                            color: Color(0xFF71807E),
+                            color: AppColors.secondaryText(context),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.7,
@@ -291,15 +283,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     const SizedBox(height: 8),
 
-                    // Groups list
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(
-                          20,
-                          0,
-                          20,
-                          90,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 90),
                         itemCount: groups.length,
                         itemBuilder: (context, index) {
                           final group = groups[index];
@@ -332,8 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (balance == 0) {
           balanceText = 'settled';
         } else if (positive) {
-          balanceText =
-              '+${group.currency} ${balance.toStringAsFixed(0)}';
+          balanceText = '+${group.currency} ${balance.toStringAsFixed(0)}';
         } else {
           balanceText =
               '-${group.currency} ${balance.abs().toStringAsFixed(0)}';
@@ -342,19 +327,17 @@ class _HomeScreenState extends State<HomeScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 0,
-          color: Colors.white,
+          color: AppColors.surface(context),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () {
-              // Group card par click -> GroupDetailsScreen
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      GroupDetailsScreen(group: group),
+                  builder: (context) => GroupDetailsScreen(group: group),
                 ),
               );
             },
@@ -362,12 +345,11 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  // Group icon
                   Container(
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE5F2EF),
+                      color: AppColors.iconChipBackground(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -380,15 +362,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           group.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF172B3A),
+                            color: AppColors.primaryText(context),
                           ),
                         ),
 
@@ -396,9 +377,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         Text(
                           'You, ${group.memberIds.length > 1 ? '${group.memberIds.length - 1} others' : 'only member'}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF71807E),
+                            color: AppColors.secondaryText(context),
                           ),
                         ),
 
@@ -406,16 +387,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         Text(
                           '${group.memberIds.length} members',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
-                            color: Color(0xFF9AA5A3),
+                            color: AppColors.tertiaryText(context),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Balance
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -425,8 +405,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: positive
                           ? const Color(0xFFE3F3E9)
                           : negative
-                              ? const Color(0xFFFDE9E1)
-                              : const Color(0xFFE9EEEE),
+                          ? const Color(0xFFFDE9E1)
+                          : const Color(0xFFE9EEEE),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -437,8 +417,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: positive
                             ? const Color(0xFF268A4B)
                             : negative
-                                ? const Color(0xFFD65A32)
-                                : const Color(0xFF647270),
+                            ? const Color(0xFFD65A32)
+                            : const Color(0xFF647270),
                       ),
                     ),
                   ),
@@ -451,7 +431,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Ab settlements bhi shamil hain — sirf expenses se calculate nahi ho raha.
   Future<double> _getGroupBalance(dynamic group) async {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
@@ -480,22 +459,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 15),
 
-          const Text(
+          Text(
             'No groups yet',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF172B3A),
+              color: AppColors.primaryText(context),
             ),
           ),
 
           const SizedBox(height: 8),
 
-          const Text(
+          Text(
             'Create a group to start sharing expenses.',
-            style: TextStyle(
-              color: Color(0xFF71807E),
-            ),
+            style: TextStyle(color: AppColors.secondaryText(context)),
           ),
 
           const SizedBox(height: 20),
@@ -505,8 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      const CreateGroupScreen(),
+                  builder: (context) => const CreateGroupScreen(),
                 ),
               );
             },

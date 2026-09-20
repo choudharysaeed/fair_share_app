@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:fair_share_app/providers/activity_provider.dart';
+import 'package:fair_share_app/utils/theme_color.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -31,41 +32,35 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8F7),
+      backgroundColor: AppColors.pageBackground(context),
 
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Activity',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF172B3A),
+            color: AppColors.primaryText(context),
           ),
         ),
         centerTitle: false,
-        backgroundColor: const Color(0xFFF4F8F7),
+        backgroundColor: AppColors.pageBackground(context),
         elevation: 0,
       ),
 
       body: Consumer<ActivityProvider>(
         builder: (context, provider, child) {
-          // Loading
           if (provider.isLoading && provider.activities.isEmpty) {
             return const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF087F75),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF087F75)),
             );
           }
 
-          if (provider.errorMessage != null &&
-              provider.activities.isEmpty) {
+          if (provider.errorMessage != null && provider.activities.isEmpty) {
             return Center(
               child: Text(
                 provider.errorMessage!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.red,
-                ),
+                style: const TextStyle(color: Colors.red),
               ),
             );
           }
@@ -74,7 +69,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
             return _buildEmptyActivity();
           }
 
-          // Activity list
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
             itemCount: provider.activities.length,
@@ -92,7 +86,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget _buildActivityCard(dynamic activity) {
     IconData icon;
 
-    // Select icon according to activity type
     switch (activity.type) {
       case 'expense_added':
         icon = Icons.receipt_long_outlined;
@@ -106,7 +99,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         icon = Icons.delete_outline;
         break;
 
-      case 'settlement':
+      case 'settlement_paid':
+      case 'settlement_received':
         icon = Icons.payments_outlined;
         break;
 
@@ -119,7 +113,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       padding: const EdgeInsets.all(15),
 
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(16),
       ),
 
@@ -130,13 +124,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
             width: 45,
             height: 45,
             decoration: BoxDecoration(
-              color: const Color(0xFFE5F2EF),
+              color: AppColors.iconChipBackground(context),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF087F75),
-            ),
+            child: Icon(icon, color: const Color(0xFF087F75)),
           ),
 
           const SizedBox(width: 12),
@@ -147,10 +138,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
               children: [
                 Text(
                   activity.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF172B3A),
+                    color: AppColors.primaryText(context),
                   ),
                 ),
 
@@ -158,9 +149,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
                 Text(
                   activity.description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF71807E),
+                    color: AppColors.secondaryText(context),
                   ),
                 ),
 
@@ -178,7 +169,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ),
           ),
 
-          // Amount
           if (activity.amount != null)
             Text(
               'Rs ${activity.amount!.toStringAsFixed(0)}',
@@ -198,30 +188,26 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.access_time,
-            size: 65,
-            color: Color(0xFF087F75),
-          ),
+          const Icon(Icons.access_time, size: 65, color: Color(0xFF087F75)),
 
           const SizedBox(height: 15),
 
-          const Text(
+          Text(
             'No activity yet',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF172B3A),
+              color: AppColors.primaryText(context),
             ),
           ),
 
           const SizedBox(height: 8),
 
-          const Text(
+          Text(
             'Your recent expenses and settlements\nwill appear here.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF71807E),
+              color: AppColors.secondaryText(context),
               fontSize: 13,
             ),
           ),
