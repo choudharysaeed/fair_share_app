@@ -60,6 +60,17 @@ class FirestoreService {
     return null;
   }
 
+    Future<void> updateUserName({
+    required String userId,
+    required String firstName,
+    required String lastName,
+  }) async {
+    await _firestore.collection('users').doc(userId).update({
+      'firstName': firstName,
+      'lastName': lastName,
+    });
+  }
+
   Future<void> addMemberToGroup({
     required String groupId,
     required String userId,

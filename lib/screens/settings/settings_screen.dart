@@ -1,4 +1,5 @@
 import 'package:fair_share_app/providers/theme_provider.dart';
+import 'package:fair_share_app/screens/settings/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fair_share_app/providers/auth_provider.dart';
@@ -87,6 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               onTap: () {
+                Navigator.push(context,MaterialPageRoute(builder: (context)=>ProfileScreen()));
               },
             ),
           ),
