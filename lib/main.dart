@@ -1,4 +1,5 @@
 import 'package:fair_share_app/providers/activity_provider.dart';
+import 'package:fair_share_app/providers/home_provider.dart';
 import 'package:fair_share_app/providers/theme_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (context) => ActivityProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context)=>HomeProvider(),
         ),
       ],
       child: const MyApp(),

@@ -1,3 +1,4 @@
+import 'package:fair_share_app/providers/home_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,11 +10,6 @@ import 'package:fair_share_app/screens/groups/create_group_screen.dart';
 
 import 'package:fair_share_app/screens/activity/activity_screen.dart';
 import 'package:fair_share_app/screens/settings/settings_screen.dart';
-
-import 'package:fair_share_app/services/firestore_service.dart';
-import 'package:fair_share_app/services/expence_service.dart';
-import 'package:fair_share_app/services/settlement_service.dart';
-import 'package:fair_share_app/services/balance_calculator.dart';
 import 'package:fair_share_app/utils/theme_color.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,54 +22,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final FirestoreService _firestoreService = FirestoreService();
-  final ExpenseService _expenseService = ExpenseService();
-  final SettlementService _settlementService = SettlementService();
+  late final GroupProvider _groupProvider;
+  List<dynamic> _lastGroups = const [];
 
   @override
   void initState() {
     super.initState();
 
     final userId = FirebaseAuth.instance.currentUser!.uid;
+    _groupProvider = context.read<GroupProvider>();
 
     Future.microtask(() {
-      Provider.of<GroupProvider>(
-        context,
-        listen: false,
-      ).listenToGroups(userId);
+      _groupProvider.listenToGroups(userId);
+      context.read<HomeProvider>().loadUserInitials();
     });
-  }
-
-  Future<Map<String, dynamic>?> _getCurrentUser() async {
-    final userId = FirebaseAuth.instance.currentUser!.uid;
-
-    return await _firestoreService.getUserById(userId);
-  }
-
-  Future<double> _getOverallOwed(
-    List<dynamic> groups,
-    String currentUserId,
-  ) async {
-    double totalOwed = 0;
-
-    for (final group in groups) {
-      final expenses = await _expenseService.getExpenses(group.id);
-      final settlements = await _settlementService.getSettlements(group.id);
-
-      final balances = BalanceCalculator.calculateBalances(
-        memberIds: List<String>.from(group.memberIds),
-        expenses: expenses,
-        settlements: settlements,
-      );
-
-      final groupBalance = balances[currentUserId] ?? 0;
-
-      if (groupBalance > 0) {
-        totalOwed += groupBalance;
-      }
-    }
-
-    return totalOwed;
   }
 
   void _onNavigationChanged(int index) {
@@ -146,8 +108,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGroupsHome() {
-    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
-
     return SafeArea(
       child: Column(
         children: [
@@ -166,28 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                FutureBuilder<Map<String, dynamic>?>(
-                  future: _getCurrentUser(),
-                  builder: (context, snapshot) {
-                    String initials = 'U';
-
-                    if (snapshot.hasData && snapshot.data != null) {
-                      final firstName = snapshot.data!['firstName'] ?? '';
-                      final lastName = snapshot.data!['lastName'] ?? '';
-
-                      if (firstName.isNotEmpty && lastName.isNotEmpty) {
-                        initials = '${firstName[0]}${lastName[0]}'
-                            .toUpperCase();
-                      } else if (firstName.isNotEmpty) {
-                        initials = firstName[0].toUpperCase();
-                      }
-                    }
-
+                Consumer<HomeProvider>(
+                  builder: (context, home, child) {
                     return CircleAvatar(
                       radius: 22,
                       backgroundColor: const Color(0xFF087F75),
                       child: Text(
-                        initials,
+                        home.initials,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -204,16 +149,24 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (context, groupProvider, child) {
                 final groups = groupProvider.groups;
 
+                if (!identical(groups, _lastGroups)) {
+                  _lastGroups = groups;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      context.read<HomeProvider>().loadBalances(groups);
+                    }
+                  });
+                }
+
                 if (groups.isEmpty) {
                   return _buildEmptyGroups();
                 }
 
                 return Column(
                   children: [
-                    FutureBuilder<double>(
-                      future: _getOverallOwed(groups, currentUserId),
-                      builder: (context, snapshot) {
-                        final amount = snapshot.data ?? 0;
+                    Consumer<HomeProvider>(
+                      builder: (context, home, child) {
+                        final amount = home.overallOwed;
 
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -228,6 +181,60 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               const Text(
                                 "OVERALL YOU'RE OWED",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.7,
+                                ),
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              Text(
+                                'Rs ${amount.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                'across ${groups.length} '
+                                '${groups.length == 1 ? 'group' : 'groups'}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Consumer<HomeProvider>(
+                      builder: (context, home, child) {
+                        final amount = home.overallOwe;
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD65A32),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "OVERALL YOU OWE",
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 11,
@@ -305,10 +312,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGroupCard(dynamic group) {
-    return FutureBuilder<double>(
-      future: _getGroupBalance(group),
-      builder: (context, snapshot) {
-        final balance = snapshot.data ?? 0;
+    return Consumer<HomeProvider>(
+      builder: (context, home, child) {
+        final balance = home.balanceFor(group.id);
 
         final bool positive = balance > 0;
         final bool negative = balance < 0;
@@ -333,13 +339,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => GroupDetailsScreen(group: group),
                 ),
               );
+
+              if (!mounted) return;
+              context.read<HomeProvider>().loadBalances(_groupProvider.groups);
             },
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -429,21 +438,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
-  }
-
-  Future<double> _getGroupBalance(dynamic group) async {
-    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
-
-    final expenses = await _expenseService.getExpenses(group.id);
-    final settlements = await _settlementService.getSettlements(group.id);
-
-    final balances = BalanceCalculator.calculateBalances(
-      memberIds: List<String>.from(group.memberIds),
-      expenses: expenses,
-      settlements: settlements,
-    );
-
-    return balances[currentUserId] ?? 0;
   }
 
   Widget _buildEmptyGroups() {

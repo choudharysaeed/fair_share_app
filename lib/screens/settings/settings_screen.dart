@@ -1,4 +1,6 @@
+import 'package:fair_share_app/providers/home_provider.dart';
 import 'package:fair_share_app/providers/theme_provider.dart';
+import 'package:fair_share_app/screens/auth/login_screen.dart';
 import 'package:fair_share_app/screens/settings/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -266,11 +268,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: _subtitleStyle(isDarkMode),
               ),
 
-              onTap: () {
-                Provider.of<AuthProvider>(
+              onTap: () async {
+                await Provider.of<AuthProvider>(
                   context,
                   listen: false,
                 ).logout();
+
+                if (!context.mounted) return;
+
+                Provider.of<HomeProvider>(context, listen: false).reset();
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder:(context)=> LoginScreen()),
+                  (route) => false,
+                );
               },
             ),
           ),

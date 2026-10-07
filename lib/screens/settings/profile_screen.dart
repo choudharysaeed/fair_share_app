@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fair_share_app/providers/home_provider.dart';
 import 'package:fair_share_app/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -75,6 +77,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (!mounted) return;
+
+    await context.read<HomeProvider>().loadUserInitials();
 
     setState(() {
       _isSaving = false;
