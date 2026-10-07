@@ -1,11 +1,9 @@
 import 'package:fair_share_app/services/auth_services.dart';
-import 'package:fair_share_app/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
 
   User? user;
   bool isLoading = false;
