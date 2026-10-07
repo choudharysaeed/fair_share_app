@@ -14,24 +14,21 @@ class GroupProvider extends ChangeNotifier {
   StreamSubscription<List<GroupModel>>? _groupsSubscription;
 
   Future<String> createGroup({
-    required String name,
-    required String userId,
-    required String currency,
-  }) async {
-    isLoading = true;
-    notifyListeners();
-
-    final groupId = await _firestoreService.createGroup(
-      name: name,
-      createdBy: userId,
-      currency: currency,
+  required String name,
+  required String userId,
+  required String currency,
+}) async {
+  isLoading = true;
+  notifyListeners();
+  try {
+    return await _firestoreService.createGroup(
+      name: name, createdBy: userId, currency: currency,
     );
-
+  } finally {
     isLoading = false;
     notifyListeners();
-
-    return groupId;
   }
+}
 
   Future<void> addMemberToGroup({
     required String groupId,
@@ -44,16 +41,15 @@ class GroupProvider extends ChangeNotifier {
   }
 
   void listenToGroups(String userId) {
-    _groupsSubscription?.cancel();
-
-    _groupsSubscription = _firestoreService.getUserGroups(userId).listen((
-      groupList,
-    ) {
+  _groupsSubscription?.cancel();
+  _groupsSubscription = _firestoreService.getUserGroups(userId).listen(
+    (groupList) {
       groups = groupList;
-
       notifyListeners();
-    });
-  }
+    },
+    onError: (e) => debugPrint('groups stream error: $e'),
+  );
+}
 
   @override
   void dispose() {

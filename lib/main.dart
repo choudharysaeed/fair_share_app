@@ -10,13 +10,21 @@ import 'providers/group_provider.dart';
 import 'providers/expence_provider.dart';
 import 'providers/settlement_provider.dart';
 import 'screens/auth/splash_screen.dart';
+import 'dart:ui';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+    
   );
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
 
   runApp(
     MultiProvider(

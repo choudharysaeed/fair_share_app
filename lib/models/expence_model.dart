@@ -41,7 +41,8 @@ class ExpenseModel {
       paidBy: map['paidBy'] as String,
 
       splitType: SplitType.values.firstWhere(
-        (type) => type.name == map['splitType'],
+      (type) => type.name == map['splitType'],
+      orElse: () => SplitType.equal,
       ),
 
       splits: Map<String, num>.from(map['splits']),
